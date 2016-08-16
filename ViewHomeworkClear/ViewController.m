@@ -10,14 +10,17 @@
 
 @interface ViewController ()
 @property (weak, nonatomic) UIView* boardView;
-@property (weak ,nonatomic) UIView* cellView; // needed Mutable Array for save cells view in heap
+@property (weak ,nonatomic) UIView* cellView;
+@property (strong, nonatomic) NSMutableArray *firstKindOfCheckers;
+@property (strong, nonatomic) NSMutableArray *secondKindOfCheckers;
 @end
 
 @implementation ViewController
 
 #pragma mark - viewDidLoad
 
-- (void)viewDidLoad {
+- (void)viewDidLoad
+{
     [super viewDidLoad];
     // Do any additional setup after loading the view, typically from a nib.
     
@@ -45,8 +48,12 @@
     CGRect cellRect;
     cellRect.size = cellSize;
     
-    CGRect checkerRect = CGRectInset(cellRect, 12, 12);
+    CGRect checkerRect = CGRectInset(cellRect, 10, 10);
 
+    // init Mutables
+    self.firstKindOfCheckers = [NSMutableArray array];
+    self.secondKindOfCheckers = [NSMutableArray array];
+    
     for (int rows = 0; rows < 8; rows++) {
         for (int columns = 0; columns < 8; columns++) {
             if ((rows + columns) % 2 != 0) {
@@ -56,20 +63,25 @@
             }
             
             if ((rows + columns)%2 != 0 && ((columns >= 0 && columns < 3) || (columns > 4 && columns < 8))) {
+                
                 checkerRect.origin.x = cellRect.origin.x + (CGRectGetWidth(cellRect) - CGRectGetWidth(checkerRect))/2;
                 checkerRect.origin.y = cellRect.origin.y + (CGRectGetHeight(cellRect) - CGRectGetHeight(checkerRect))/2;
+                
                 if (columns >= 0 && columns < 3) {
-                    [self createViewWithRect:checkerRect withColor:[UIColor yellowColor] withParentView:self.boardView andMask:stableMask];
+                    
+                    UIView *first = [self createViewWithRect:checkerRect withColor:[UIColor yellowColor] withParentView:self.boardView andMask:stableMask];
+                    first.layer.cornerRadius = 5;
+                    [self.firstKindOfCheckers addObject:first];
+                    
                 } else {
-                    [self createViewWithRect:checkerRect withColor:[UIColor blueColor] withParentView:self.boardView andMask:stableMask];
+                    
+                    UIView *second = [self createViewWithRect:checkerRect withColor:[UIColor blueColor] withParentView:self.boardView andMask:stableMask];
+                    second.layer.cornerRadius = 5;
+                    [self.secondKindOfCheckers addObject:second];
                 }
             }
         }
     }
-    
-    // make checkers (needed heap???)
-    
-    
 }
 
 #pragma mark - createViewWithRect
@@ -84,9 +96,76 @@
     return view;
 }
 
-#pragma mark Memory
+#pragma mark - Rotation
 
-- (void)didReceiveMemoryWarning {
+- (void) didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation
+{
+    [self exchangeWithAnimation];
+    
+}
+
+#pragma mark - setRandomColor
+
+- (void) setRandomColorForView:(UIView*)view
+{
+    float randRed = (float)(arc4random()%256/255);
+    float randGreen = (float)(arc4random()%256/255);
+    float randBlue = (float)(arc4random()%256/255);
+    
+    UIColor *randColor = [UIColor colorWithRed:randRed green:randGreen blue:randBlue alpha:1];
+    [view setBackgroundColor:randColor];
+}
+#pragma mark - Exchange checkers
+
+- (void) exchangeWithAnimation
+{
+    for (int i  = 0; i < [self.firstKindOfCheckers count]; i++) {
+        
+        NSInteger firstRandomIndex = arc4random()%12;
+        NSInteger secondRandomIndex = arc4random()%12;
+        
+        UIView* firstView = [self.firstKindOfCheckers objectAtIndex:firstRandomIndex];
+        UIView* secondView = [self.secondKindOfCheckers objectAtIndex:secondRandomIndex];
+        
+        CGRect tempView = firstView.frame;
+        
+        [UIView animateWithDuration:2
+                         animations:^{
+                             [firstView setFrame:secondView.frame];
+                             [secondView setFrame:tempView];
+                             
+                             [self.boardView bringSubviewToFront:firstView];
+                             [self.boardView bringSubviewToFront:secondView];
+                         }];
+    }
+}
+/* Another method for Exchange checkers (Not finished) */
+/*
+- (void) exchangeWithoutAnimation {
+    for (int i=0; i<[self.boardView.subviews count]; i++) {
+        UIView* subView = [self.boardView.subviews objectAtIndex:i];
+        if (subView.tag == 4) {
+            while (YES) {
+                NSUInteger randomIndex = arc4random()%[self.boardView.subviews count];
+                UIView* subView2 = [self.boardView.subviews objectAtIndex:randomIndex];
+                if (subView2.tag == 4 && ![subView isEqual:subView2]) {
+                    CGRect frame = subView.frame;
+                    subView.frame = CGRectMake(subView2.frame.origin.x, subView2.frame.origin.y, subView2.frame.size.width, subView2.frame.size.height);
+                    subView2.frame = CGRectMake(frame.origin.x, frame.origin.y, subView2.frame.size.width, subView2.frame.size.height);
+                    [self.boardView exchangeSubviewAtIndex:i withSubviewAtIndex:randomIndex];
+                    break;
+                }
+            }
+        }
+    }
+}
+*/
+
+
+#pragma mark - Memory
+
+- (void)didReceiveMemoryWarning
+{
     [super didReceiveMemoryWarning];
     // Dispose of any resources that can be recreated.
 }
